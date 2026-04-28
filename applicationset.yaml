@@ -1,0 +1,51 @@
+---
+# ApplicationSet for deploying the globex Helm chart via ACM + OpenShift GitOps.
+# Uses the cluster decision resource generator with an ACM Placement to select
+# the target cluster(s).
+#
+# Apply this on the ACM hub cluster:
+#   oc apply -f applicationset.yaml
+#
+# Prerequisites on the hub:
+#   - OpenShift GitOps operator installed
+#   - ACM Placement named "globex-placement" in namespace "openshift-gitops"
+#     (selecting the cluster(s) where globex should be deployed)
+#   - GitOpsCluster resource registering ACM clusters with ArgoCD
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: globex
+  namespace: openshift-gitops
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: globex-placement
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: globex-{{name}}
+      labels:
+        velero.io/exclude-from-backup: "true"
+    spec:
+      project: default
+      destination:
+        namespace: globex
+        server: "{{server}}"
+      sources:
+        - repoURL: https://github.com/anatsheh84/globex-dr.git
+          targetRevision: fix
+          path: .
+          helm:
+            releaseName: globex
+            valueFiles:
+              - values.yaml
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - PruneLast=true
