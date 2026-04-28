@@ -27,16 +27,9 @@ spec:
         app.kubernetes.io/part-of: globex-app
         name: catalog-database
     spec:
-      initContainers:
-      - name: permission-init
-        image: alpine:3.16.0
-        command:
-        - sh
-        - -c
-        - (chmod -R 777 /var/lib/pgsql/data)
-        volumeMounts:
-          - name: catalog-data
-            mountPath: /var/lib/pgsql/data
+      securityContext:
+        fsGroup: 26
+        fsGroupChangePolicy: OnRootMismatch
       containers:
       - env:
         - name: POSTGRESQL_USER
